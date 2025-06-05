@@ -43,7 +43,7 @@
       display: block;
     }
 
-    textarea.csp-textarea, input[type="text"].csp-input {
+    textarea.csp-textarea, input[type="password"].csp-input {
       padding: 0.5rem;
       border: 1px solid #d1d5db;
       border-radius: 0.375rem;
@@ -141,6 +141,17 @@
       font-weight: 600;
     }
 
+    .csp-session-speakers {
+      color: #4b5563;
+      font-size: 0.9rem;
+    }
+
+    .csp-session-room {
+      color: #6b7280;
+      font-size: 0.85rem;
+      margin-top: 0.25rem;
+    }
+
     .csp-detailsBtn {
       background: #10b981;
       padding: 0.25rem 0.5rem;
@@ -208,7 +219,7 @@
   <div id="csp-apiKeyContainer">
     <label class="csp-label">
       OpenAI API Key
-      <input type="text" id="csp-apiKey" class="csp-input" placeholder="sk-..." />
+      <input type="password" id="csp-apiKey" class="csp-input" placeholder="sk-..." />
     </label>
   </div>
 
@@ -238,6 +249,7 @@
       <span id="csp-modalClose" class="csp-modal-close">&times;</span>
       <h2 id="csp-modalTitle"></h2>
       <p id="csp-modalSpeakers"></p>
+      <p id="csp-modalRoom"></p>
       <p id="csp-modalDescription"></p>
     </div>
   </div>
@@ -302,6 +314,7 @@
           detailsDiv.innerHTML = `
             <div class="csp-session-title">${s.title}</div>
             <div class="csp-session-speakers">${s.speakerNames.join(", ")}</div>
+            <div class="csp-session-room">Room: ${s.room || 'TBD'}</div>
           `;
           // Toggle checkbox when clicking on details text
           detailsDiv.addEventListener("click", () => {
@@ -372,6 +385,7 @@
             const existing = sessionsById.get(String(s["Session ID"]));
             if (existing) {
               existing.description = s.Description || existing.description;
+              existing.room = s.Room || existing.room;
             }
           });
         }
@@ -383,6 +397,7 @@
           startsAt: s.startsAt || s["Scheduled At"],
           speakerIds: s.speakers || [],
           speakerNames: (s.speakers || []).map((id) => csp_speakers.get(id) || id),
+          room: s.room || null,
         }));
 
         // Save to localStorage
@@ -410,6 +425,7 @@
       if (!session) return;
       document.getElementById("csp-modalTitle").textContent = session.title;
       document.getElementById("csp-modalSpeakers").textContent = 'Speakers: ' + session.speakerNames.join(', ');
+      document.getElementById("csp-modalRoom").textContent = 'Room: ' + (session.room || 'TBD');
       document.getElementById("csp-modalDescription").textContent = session.description;
       document.getElementById("csp-modal").style.display = "block";
     }
