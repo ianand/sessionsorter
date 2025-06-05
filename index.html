@@ -234,6 +234,9 @@
       Ask ChatGPT
       <span id="csp-spinner" class="csp-spinner" hidden></span>
     </button>
+    <button id="csp-happeningNowBtn" class="csp-button">
+      Happening Now
+    </button>
   </section>
 
   <button id="csp-toggleSessions" class="csp-button">Hide Sessions</button>
@@ -294,6 +297,7 @@
       for (const [start, list] of Object.entries(grouped)) {
         const tr = document.createElement("tr");
         tr.classList.add("csp-timeslot");
+        tr.dataset.startTime = start; // Add data attribute for scrolling
         const th = document.createElement("th");
         th.classList.add("csp-th");
         th.textContent = `${csp_formatTime(start)}`;
@@ -471,6 +475,39 @@
       const toggleBtn = document.getElementById("csp-toggleSessions");
       const modal = document.getElementById("csp-modal");
       const modalClose = document.getElementById("csp-modalClose");
+      const happeningNowBtn = document.getElementById("csp-happeningNowBtn");
+
+      // Happening Now button click handler
+      happeningNowBtn.addEventListener("click", () => {
+        const now = new Date();
+        const rows = document.querySelectorAll(".csp-timeslot");
+        let closestRow = null;
+        let minDiff = Infinity;
+
+        rows.forEach(row => {
+          const startTime = new Date(row.dataset.startTime);
+          const diff = Math.abs(startTime - now);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestRow = row;
+          }
+        });
+
+        if (closestRow) {
+          // Make sure sessions are visible
+          sessionsContainer.hidden = false;
+          toggleBtn.textContent = "Hide Sessions";
+          
+          // Scroll to the row
+          closestRow.scrollIntoView({ behavior: "smooth", block: "center" });
+          
+          // Highlight the row briefly
+          closestRow.style.backgroundColor = "#e5e7eb";
+          setTimeout(() => {
+            closestRow.style.backgroundColor = "";
+          }, 2000);
+        }
+      });
 
       // Toggle sessions visibility
       toggleBtn.addEventListener("click", () => {
