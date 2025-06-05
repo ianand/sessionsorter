@@ -27,15 +27,14 @@
     #csp-stickyControls {
       position: sticky;
       top: 0;
+      left: 0;
+      right: 0;
       background: #f9fafb;
-      padding-top: 1rem;
-      padding-bottom: 1rem;
+      padding: 1rem 2rem;
       z-index: 10;
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
-      margin-bottom: 2rem;
-      max-width: 640px;
       border-bottom: 1px solid #e5e7eb;
     }
 
@@ -103,6 +102,7 @@
       width: 100%;
       border-collapse: collapse;
       margin-bottom: 2rem;
+      max-width: none;
     }
 
     th.csp-th, td.csp-td {
@@ -134,6 +134,7 @@
 
     .csp-session-details {
       flex: 1;
+      cursor: pointer;
     }
 
     .csp-session-title {
@@ -302,6 +303,10 @@
             <div class="csp-session-title">${s.title}</div>
             <div class="csp-session-speakers">${s.speakerNames.join(", ")}</div>
           `;
+          // Toggle checkbox when clicking on details text
+          detailsDiv.addEventListener("click", () => {
+            cb.checked = !cb.checked;
+          });
 
           const detailsBtn = document.createElement("button");
           detailsBtn.className = "csp-detailsBtn";
@@ -322,9 +327,26 @@
     async function csp_loadData() {
       const askBtn = document.getElementById("csp-askBtn");
       const spinner = document.getElementById("csp-spinner");
-      // Show spinner and keep button disabled
+      // Try loading from localStorage first
+      const stored = localStorage.getItem("csp_sessions_data");
       askBtn.disabled = true;
       spinner.hidden = false;
+
+      if (stored) {
+        
+        try {
+          csp_sessions = JSON.parse(stored);
+          csp_render();
+          askBtn.disabled = false;
+          spinner.hidden = true;
+          
+        } catch (e) {
+          console.error("Failed to parse sessions from localStorage", e);
+        }
+      }
+
+      // Now fetch fresh data in background
+      // Show spinner and disable ask button during network fetch
 
       try {
         const [data1, data2] = await Promise.all([
@@ -334,6 +356,7 @@
 
         // Build speaker map from first file
         if (Array.isArray(data1.speakers)) {
+          csp_speakers.clear();
           data1.speakers.forEach((sp) => {
             csp_speakers.set(sp.id, sp.fullName || `${sp.firstName} ${sp.lastName}`);
           });
@@ -362,13 +385,20 @@
           speakerNames: (s.speakers || []).map((id) => csp_speakers.get(id) || id),
         }));
 
+        // Save to localStorage
+        try {
+          localStorage.setItem("csp_sessions_data", JSON.stringify(csp_sessions));
+        } catch (e) {
+          console.error("Failed to save sessions to localStorage", e);
+        }
+
         csp_render();
       } catch (err) {
-        alert(`Error loading sessions: ${err.message}`);
+        console.error(`Error fetching sessions: ${err.message}`);
       } finally {
         // Hide spinner, enable ask button once data is loaded or on error
         spinner.hidden = true;
-        document.getElementById("csp-askBtn").disabled = false;
+        askBtn.disabled = false;
       }
     }
 
