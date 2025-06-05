@@ -391,8 +391,11 @@
         } catch (e) {
           console.error("Failed to save sessions to localStorage", e);
         }
-
-        csp_render();
+        
+        // don't re-render on the user. wait until next reload
+        if(!stored) {
+          csp_render();
+        }
       } catch (err) {
         console.error(`Error fetching sessions: ${err.message}`);
       } finally {
