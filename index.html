@@ -240,6 +240,7 @@
   </section>
 
   <button id="csp-toggleSessions" class="csp-button">Hide Sessions</button>
+  <button id="csp-selectAllBtn" class="csp-button">Select All</button>
   <div id="csp-sessionsContainer">
     <table id="csp-sessionTable" class="csp-table"></table>
   </div>
@@ -473,6 +474,7 @@
       const spinner = document.getElementById("csp-spinner");
       const sessionsContainer = document.getElementById("csp-sessionsContainer");
       const toggleBtn = document.getElementById("csp-toggleSessions");
+      const selectAllBtn = document.getElementById("csp-selectAllBtn");
       const modal = document.getElementById("csp-modal");
       const modalClose = document.getElementById("csp-modalClose");
       const happeningNowBtn = document.getElementById("csp-happeningNowBtn");
@@ -514,6 +516,20 @@
         const hidden = sessionsContainer.hidden;
         sessionsContainer.hidden = !hidden;
         toggleBtn.textContent = hidden ? "Hide Sessions" : "Show Sessions";
+      });
+
+      // Select All button click handler
+      selectAllBtn.addEventListener("click", () => {
+        const checkboxes = document.querySelectorAll(".csp-session input[type=checkbox]");
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        
+        // If all are checked, uncheck all. Otherwise, check all
+        checkboxes.forEach(cb => {
+          cb.checked = !allChecked;
+        });
+        
+        // Update button text
+        selectAllBtn.textContent = allChecked ? "Select All" : "Unselect All";
       });
 
       // Close modal
