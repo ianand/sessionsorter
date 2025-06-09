@@ -207,6 +207,21 @@
       color: #000;
       text-decoration: none;
     }
+
+    /* Track selector styles */
+    #csp-trackSelector {
+      margin-bottom: 1rem;
+      max-width: 640px;
+    }
+
+    #csp-trackSelector select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      font-size: 0.95rem;
+      background-color: white;
+    }
   </style>
   <!-- Marked.js for Markdown rendering -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -220,6 +235,16 @@
     <label class="csp-label">
       OpenAI API Key
       <input type="password" id="csp-apiKey" class="csp-input" placeholder="sk-..." />
+    </label>
+  </div>
+
+  <!-- Track selector -->
+  <div id="csp-trackSelector">
+    <label class="csp-label">
+      Filter by Track
+      <select id="csp-trackSelect">
+        <option value="">All Tracks</option>
+      </select>
     </label>
   </div>
 
@@ -266,6 +291,7 @@
     // --- State ---
     let csp_sessions = [];
     let csp_speakers = new Map();
+    let csp_filteredSessions = [];
 
     // --- Helpers ---
     function csp_formatTime(iso) {
@@ -290,10 +316,13 @@
       const table = document.getElementById("csp-sessionTable");
       table.innerHTML = "";
 
-      // Sort sessions by start time
-      csp_sessions.sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
+      // Use filtered sessions if available, otherwise use all sessions
+      const sessionsToRender = csp_filteredSessions.length > 0 ? csp_filteredSessions : csp_sessions;
 
-      const grouped = csp_groupBy(csp_sessions, (s) => s.startsAt);
+      // Sort sessions by start time
+      sessionsToRender.sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
+
+      const grouped = csp_groupBy(sessionsToRender, (s) => s.startsAt);
 
       for (const [start, list] of Object.entries(grouped)) {
         const tr = document.createElement("tr");
@@ -351,21 +380,18 @@
       spinner.hidden = false;
 
       if (stored) {
-        
         try {
           csp_sessions = JSON.parse(stored);
           csp_render();
+          csp_updateTrackSelector();
           askBtn.disabled = false;
           spinner.hidden = true;
-          
         } catch (e) {
           console.error("Failed to parse sessions from localStorage", e);
         }
       }
 
       // Now fetch fresh data in background
-      // Show spinner and disable ask button during network fetch
-
       try {
         const [data1, data2] = await Promise.all([
           fetch(csp_SESSIONS_URL).then((r) => r.json()),
@@ -391,6 +417,7 @@
             if (existing) {
               existing.description = s.Description || existing.description;
               existing.room = s.Room || existing.room;
+              existing.track = s["Assigned Track"] || "";
             }
           });
         }
@@ -403,6 +430,7 @@
           speakerIds: s.speakers || [],
           speakerNames: (s.speakers || []).map((id) => csp_speakers.get(id) || id),
           room: s.room || null,
+          track: s.track || "",
         }));
 
         // Save to localStorage
@@ -415,11 +443,11 @@
         // don't re-render on the user. wait until next reload
         if(!stored) {
           csp_render();
+          csp_updateTrackSelector();
         }
       } catch (err) {
         console.error(`Error fetching sessions: ${err.message}`);
       } finally {
-        // Hide spinner, enable ask button once data is loaded or on error
         spinner.hidden = true;
         askBtn.disabled = false;
       }
@@ -459,6 +487,36 @@
       return data.choices?.[0]?.message?.content?.trim() || "(No response)";
     }
 
+    function csp_updateTrackSelector() {
+      const trackSelect = document.getElementById("csp-trackSelect");
+      // Get unique tracks and filter out empty strings
+      const tracks = new Set(csp_sessions.map(s => s.track).filter(track => track && track.trim() !== ""));
+      const sortedTracks = Array.from(tracks).sort();
+      
+      // Keep the "All Tracks" option
+      trackSelect.innerHTML = '<option value="">All Tracks</option>';
+      
+      // Add track options
+      sortedTracks.forEach(track => {
+        const option = document.createElement("option");
+        option.value = track;
+        option.textContent = track;
+        trackSelect.appendChild(option);
+      });
+
+      // Log tracks for debugging
+      console.log("Available tracks:", sortedTracks);
+    }
+
+    function csp_filterByTrack(track) {
+      if (!track) {
+        csp_filteredSessions = [];
+      } else {
+        csp_filteredSessions = csp_sessions.filter(s => s.track === track);
+      }
+      csp_render();
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
       const apiInput = document.getElementById("csp-apiKey");
       // Load from localStorage if available
@@ -468,6 +526,12 @@
       // Save to localStorage on change
       apiInput.addEventListener("input", () => {
         localStorage.setItem("openai_key", apiInput.value.trim());
+      });
+
+      // Add track selector change handler
+      const trackSelect = document.getElementById("csp-trackSelect");
+      trackSelect.addEventListener("change", () => {
+        csp_filterByTrack(trackSelect.value);
       });
 
       const askBtn = document.getElementById("csp-askBtn");
