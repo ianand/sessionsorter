@@ -511,8 +511,22 @@
     function csp_filterByTrack(track) {
       if (!track) {
         csp_filteredSessions = [];
+        // Log details for all sessions
+        console.log('All sessions:');
+        let debug_list_of_sessions = "";
+        csp_sessions.forEach(session => {
+          debug_list_of_sessions += `${session.title}\t${session.speakerNames.join(', ')}\t${session.id}\n`;
+        });
+        console.log(debug_list_of_sessions);
       } else {
         csp_filteredSessions = csp_sessions.filter(s => s.track === track);
+        // Log details for each filtered session
+        console.log('Sessions in track:', track);
+        let debug_list_of_sessions = "";
+        csp_filteredSessions.forEach(session => {
+          debug_list_of_sessions += `${session.title}\t${session.speakerNames.join(', ')}\t${session.id}\n`;
+        });
+        console.log(debug_list_of_sessions);
       }
       csp_render();
     }
