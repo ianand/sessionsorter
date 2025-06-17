@@ -161,9 +161,30 @@
       color: white;
       cursor: pointer;
       transition: background 0.2s;
+      margin-left: 0;
     }
     .csp-detailsBtn:hover {
       background: #059669;
+    }
+
+    .csp-btnContainer {
+      display: flex;
+      flex-direction: row;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+    .csp-watchBtn {
+      background-color: #ef4444;
+    }
+    .csp-watchBtn:hover {
+      background-color: #dc2626;
+    }
+    @media (max-width: 600px) {
+      .csp-btnContainer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+      }
     }
 
     #csp-response {
@@ -225,6 +246,26 @@
   </style>
   <!-- Marked.js for Markdown rendering -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script id="session-ids-to-youtube-links" type="text/plain">
+    935459	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=10812
+    933472	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=11977
+    935461	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=1217
+    947233	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=1943
+    942167	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=3065
+    916116	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=3425
+    916189	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=4845
+    929855	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=8940
+    914012	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=9930
+    939942	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=18825
+    915387	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=19945
+    914017	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=21090
+    904751	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=22250
+    936564	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=26131
+    943899	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=27205
+    943904	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=27510
+    941906	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=28298
+    925974	https://www.youtube.com/watch?v=U-fMsbY-kHY&t=29425
+      </script>
 </head>
 <body class="csp-body">
   <h1 class="csp-heading">Session Sorter</h1>
@@ -292,6 +333,19 @@
     let csp_sessions = [];
     let csp_speakers = new Map();
     let csp_filteredSessions = [];
+    let csp_youtubeLinks = new Map();
+
+    // Parse YouTube links
+    function csp_parseYoutubeLinks() {
+      const linksText = document.getElementById('session-ids-to-youtube-links').textContent.trim();
+      const lines = linksText.split('\n');
+      lines.forEach(line => {
+        const [id, url] = line.trim().split('\t');
+        if (id && url) {
+          csp_youtubeLinks.set(id.trim(), url.trim());
+        }
+      });
+    }
 
     // --- Helpers ---
     function csp_formatTime(iso) {
@@ -355,15 +409,32 @@
             cb.checked = !cb.checked;
           });
 
+          div.appendChild(cb);
+          div.appendChild(detailsDiv);
+
+          // Button container for Watch and Details
+          const btnContainer = document.createElement("div");
+          btnContainer.className = "csp-btnContainer";
+
+          // Add Watch button if YouTube link exists
+          const youtubeLink = csp_youtubeLinks.get(s.id);
+          if (youtubeLink) {
+            const watchBtn = document.createElement("button");
+            watchBtn.className = "csp-detailsBtn csp-watchBtn";
+            watchBtn.textContent = "Watch";
+            watchBtn.addEventListener("click", () => window.open(youtubeLink, "_blank"));
+            btnContainer.appendChild(watchBtn);
+          }
+
           const detailsBtn = document.createElement("button");
           detailsBtn.className = "csp-detailsBtn";
           detailsBtn.textContent = "Details";
           detailsBtn.dataset.id = s.id;
           detailsBtn.addEventListener("click", () => csp_showModal(s.id));
+          btnContainer.appendChild(detailsBtn);
 
-          div.appendChild(cb);
-          div.appendChild(detailsDiv);
-          div.appendChild(detailsBtn);
+          div.appendChild(btnContainer);
+
           td.appendChild(div);
         });
         tr.appendChild(td);
@@ -532,6 +603,9 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+      // Parse YouTube links first
+      csp_parseYoutubeLinks();
+
       const apiInput = document.getElementById("csp-apiKey");
       // Load from localStorage if available
       const savedKey = localStorage.getItem("openai_key");
