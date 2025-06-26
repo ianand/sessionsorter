@@ -180,6 +180,20 @@
       background-color: #dc2626;
     }
 
+    .csp-watchedBtn {
+      background-color: #6b7280;
+      transition: background-color 0.2s;
+    }
+    .csp-watchedBtn:hover {
+      background-color: #4b5563;
+    }
+    .csp-watchedBtn.watched {
+      background-color: #10b981;
+    }
+    .csp-watchedBtn.watched:hover {
+      background-color: #059669;
+    }
+
     /* Session ID styles in response */
     .csp-sessionId {
       display: inline-flex;
@@ -415,6 +429,41 @@
     let csp_speakers = new Map();
     let csp_filteredSessions = [];
     let csp_youtubeLinks = new Map();
+    let csp_watchedSessions = new Set(); // Track watched session IDs
+
+    // Load watched sessions from localStorage
+    function csp_loadWatchedSessions() {
+      try {
+        const stored = localStorage.getItem("csp_watched_sessions");
+        if (stored) {
+          const watchedIds = JSON.parse(stored);
+          csp_watchedSessions = new Set(watchedIds);
+        }
+      } catch (e) {
+        console.error("Failed to load watched sessions from localStorage", e);
+        csp_watchedSessions = new Set();
+      }
+    }
+
+    // Save watched sessions to localStorage
+    function csp_saveWatchedSessions() {
+      try {
+        const watchedIds = Array.from(csp_watchedSessions);
+        localStorage.setItem("csp_watched_sessions", JSON.stringify(watchedIds));
+      } catch (e) {
+        console.error("Failed to save watched sessions to localStorage", e);
+      }
+    }
+
+    // Toggle watched state for a session
+    function csp_toggleWatched(sessionId) {
+      if (csp_watchedSessions.has(sessionId)) {
+        csp_watchedSessions.delete(sessionId);
+      } else {
+        csp_watchedSessions.add(sessionId);
+      }
+      csp_saveWatchedSessions();
+    }
 
     // Parse YouTube links
     function csp_parseYoutubeLinks() {
@@ -426,6 +475,9 @@
           csp_youtubeLinks.set(id.trim(), url.trim());
         }
       });
+      
+      // Load watched sessions
+      csp_loadWatchedSessions();
     }
 
     // Extract YouTube video ID from URL
@@ -484,7 +536,7 @@
           const cb = document.createElement("input");
           cb.type = "checkbox";
           cb.dataset.id = s.id;
-          cb.checked = true;  // Set checked by default
+          cb.checked = true;  // Set checked by default for selection
 
           const detailsDiv = document.createElement("div");
           detailsDiv.className = "csp-session-details";
@@ -501,7 +553,7 @@
           div.appendChild(cb);
           div.appendChild(detailsDiv);
 
-          // Button container for Watch and Details
+          // Button container for Watch, Details, and Watched toggle
           const btnContainer = document.createElement("div");
           btnContainer.className = "csp-btnContainer";
 
@@ -521,6 +573,20 @@
           detailsBtn.dataset.id = s.id;
           detailsBtn.addEventListener("click", () => csp_showModal(s.id));
           btnContainer.appendChild(detailsBtn);
+
+          // Add Watched toggle
+          const watchedBtn = document.createElement("button");
+          watchedBtn.className = "csp-detailsBtn csp-watchedBtn";
+          if (csp_watchedSessions.has(s.id)) {
+            watchedBtn.classList.add("watched");
+          }
+          watchedBtn.textContent = csp_watchedSessions.has(s.id) ? "✓ Watched" : "Watched";
+          watchedBtn.addEventListener("click", () => {
+            csp_toggleWatched(s.id);
+            watchedBtn.classList.toggle("watched");
+            watchedBtn.textContent = csp_watchedSessions.has(s.id) ? "✓ Watched" : "Watched";
+          });
+          btnContainer.appendChild(watchedBtn);
 
           div.appendChild(btnContainer);
 
@@ -741,7 +807,7 @@
     document.addEventListener("DOMContentLoaded", () => {
       // Parse YouTube links first
       csp_parseYoutubeLinks();
-
+      
       const apiInput = document.getElementById("csp-apiKey");
       // Load from localStorage if available
       const savedKey = localStorage.getItem("openai_key");
