@@ -397,6 +397,14 @@
     </div>
   </div>
 
+  <!-- Modal for YouTube video -->
+  <div id="csp-youtubeModal" class="csp-modal">
+    <div class="csp-modal-content" style="max-width: 800px; padding: 0;">
+      <span id="csp-youtubeModalClose" class="csp-modal-close">&times;</span>
+      <div id="csp-youtubePlayer" style="width: 100%; height: 450px;"></div>
+    </div>
+  </div>
+
   <script>
     // --- CONFIG ---
     const csp_SESSIONS_URL = "https://sessionize.com/api/v2/w3hd2z8a/view/All";
@@ -418,6 +426,13 @@
           csp_youtubeLinks.set(id.trim(), url.trim());
         }
       });
+    }
+
+    // Extract YouTube video ID from URL
+    function csp_extractYouTubeId(url) {
+      const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/;
+      const match = url.match(regex);
+      return match ? match[1] : null;
     }
 
     // --- Helpers ---
@@ -496,7 +511,7 @@
             const watchBtn = document.createElement("button");
             watchBtn.className = "csp-detailsBtn csp-watchBtn";
             watchBtn.textContent = "Watch";
-            watchBtn.addEventListener("click", () => window.open(youtubeLink, "_blank"));
+            watchBtn.addEventListener("click", () => csp_showYouTubeModal(s.id));
             btnContainer.appendChild(watchBtn);
           }
 
@@ -688,11 +703,39 @@
         
         let buttons = `<button class="csp-detailsBtn" onclick="csp_showModal('${sessionId}')">Details</button>`;
         if (youtubeLink) {
-          buttons += `<button class="csp-detailsBtn csp-watchBtn" onclick="window.open('${youtubeLink}', '_blank')">Watch</button>`;
+          buttons += `<button class="csp-detailsBtn csp-watchBtn" onclick="csp_showYouTubeModal('${sessionId}')">Watch</button>`;
         }
         
         return `<span class="csp-sessionId">${buttons}</span>`;
       });
+    }
+
+    function csp_showYouTubeModal(sessionId) {
+      const session = csp_sessions.find((s) => s.id == sessionId);
+      if (!session) return;
+      const youtubeLink = csp_youtubeLinks.get(sessionId);
+      if (!youtubeLink) return;
+
+      const videoId = csp_extractYouTubeId(youtubeLink);
+      if (!videoId) return;
+
+      // Extract time parameter if present
+      const timeMatch = youtubeLink.match(/[?&]t=(\d+)/);
+      const startTime = timeMatch ? timeMatch[1] : '0';
+
+      const playerContainer = document.getElementById("csp-youtubePlayer");
+      playerContainer.innerHTML = `<iframe width="100%" height="450" src="https://www.youtube.com/embed/${videoId}?start=${startTime}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+
+      const modal = document.getElementById("csp-youtubeModal");
+      modal.style.display = "block";
+    }
+
+    function csp_hideYouTubeModal() {
+      const modal = document.getElementById("csp-youtubeModal");
+      const playerContainer = document.getElementById("csp-youtubePlayer");
+      // Clear the iframe to stop the video
+      playerContainer.innerHTML = '';
+      modal.style.display = "none";
     }
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -723,6 +766,8 @@
       const modal = document.getElementById("csp-modal");
       const modalClose = document.getElementById("csp-modalClose");
       const happeningNowBtn = document.getElementById("csp-happeningNowBtn");
+      const youtubeModal = document.getElementById("csp-youtubeModal");
+      const youtubeModalClose = document.getElementById("csp-youtubeModalClose");
 
       // Happening Now button click handler
       happeningNowBtn.addEventListener("click", () => {
@@ -775,6 +820,14 @@
         
         // Update button text
         selectAllBtn.textContent = allChecked ? "Select All" : "Unselect All";
+      });
+
+      // Close YouTube modal
+      youtubeModalClose.addEventListener("click", csp_hideYouTubeModal);
+      window.addEventListener("click", (event) => {
+        if (event.target == youtubeModal) {
+          csp_hideYouTubeModal();
+        }
       });
 
       // Close modal
