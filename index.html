@@ -394,6 +394,7 @@
 
   <button id="csp-toggleSessions" class="csp-button">Hide Sessions</button>
   <button id="csp-selectAllBtn" class="csp-button">Select All</button>
+  <button id="csp-toggleWatchedBtn" class="csp-button">Hide Watched Sessions</button>
   <div id="csp-sessionsContainer">
     <table id="csp-sessionTable" class="csp-table"></table>
   </div>
@@ -430,6 +431,7 @@
     let csp_filteredSessions = [];
     let csp_youtubeLinks = new Map();
     let csp_watchedSessions = new Set(); // Track watched session IDs
+    let csp_hideWatchedSessions = false; // Track whether to hide watched sessions
 
     // Load watched sessions from localStorage
     function csp_loadWatchedSessions() {
@@ -511,7 +513,12 @@
       table.innerHTML = "";
 
       // Use filtered sessions if available, otherwise use all sessions
-      const sessionsToRender = csp_filteredSessions.length > 0 ? csp_filteredSessions : csp_sessions;
+      let sessionsToRender = csp_filteredSessions.length > 0 ? csp_filteredSessions : csp_sessions;
+
+      // Filter out watched sessions if hide mode is active
+      if (csp_hideWatchedSessions) {
+        sessionsToRender = sessionsToRender.filter(s => !csp_watchedSessions.has(s.id));
+      }
 
       // Sort sessions by start time
       sessionsToRender.sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
@@ -536,7 +543,8 @@
           const cb = document.createElement("input");
           cb.type = "checkbox";
           cb.dataset.id = s.id;
-          cb.checked = true;  // Set checked by default for selection
+          // Only check by default if not hiding watched sessions or if session is not watched
+          cb.checked = !csp_hideWatchedSessions || !csp_watchedSessions.has(s.id);
 
           const detailsDiv = document.createElement("div");
           detailsDiv.className = "csp-session-details";
@@ -829,6 +837,7 @@
       const sessionsContainer = document.getElementById("csp-sessionsContainer");
       const toggleBtn = document.getElementById("csp-toggleSessions");
       const selectAllBtn = document.getElementById("csp-selectAllBtn");
+      const toggleWatchedBtn = document.getElementById("csp-toggleWatchedBtn");
       const modal = document.getElementById("csp-modal");
       const modalClose = document.getElementById("csp-modalClose");
       const happeningNowBtn = document.getElementById("csp-happeningNowBtn");
@@ -872,6 +881,13 @@
         const hidden = sessionsContainer.hidden;
         sessionsContainer.hidden = !hidden;
         toggleBtn.textContent = hidden ? "Hide Sessions" : "Show Sessions";
+      });
+
+      // Toggle watched sessions visibility
+      toggleWatchedBtn.addEventListener("click", () => {
+        csp_hideWatchedSessions = !csp_hideWatchedSessions;
+        toggleWatchedBtn.textContent = csp_hideWatchedSessions ? "Show Watched Sessions" : "Hide Watched Sessions";
+        csp_render();
       });
 
       // Select All button click handler
